@@ -790,8 +790,8 @@ class SparseHensman(Model):
 
         n = self.X.shape[0]
         self.is_sparse = Z is not None
-        import pdb
-        pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
 
         # train_R: X - [804, 4], Z - 4**3
         # test_example: X - (1067, 2) Z - 2**3
@@ -854,8 +854,6 @@ class SparseHensman(Model):
     def _predict_f(self, X, full=False):
         
         Kuu = self.kernel(self.Z())
-        import pdb
-        pdb.set_trace()
         Kus = self.kernel(self.Z(),X)  # NxS
 
         Luu = self._cholesky(Kuu, add_jitter=True)  # NxN

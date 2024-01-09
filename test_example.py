@@ -7,6 +7,7 @@ torch.manual_seed(1)
 
 from torch.utils.data import TensorDataset, DataLoader
 print(mogptk.__file__)
+mogptk.gpr.use_gpu(0)
 column_names = ['EUR/USD', 'CAD/USD', 'JPY/USD', 'GBP/USD', 'CHF/USD',
                 'AUD/USD', 'HKD/USD','NZD/USD', 'KRW/USD','MXN/USD']
 
@@ -80,7 +81,6 @@ def get_torch_dataloader(dataset, batch_size):
     # py = np.array(py).transpose(1, 0)
 
     px, py = _to_kernel_format(dataset, x, y)
-    pdb.set_trace()
     train_ds = TensorDataset(torch.from_numpy(px), torch.from_numpy(py))
     train_loader = DataLoader(train_ds, batch_size=batch_size)
     return train_loader
@@ -96,10 +96,9 @@ for n in range(n_trials):
     for i, channel in enumerate(mosm_dataset):
         channel.remove_randomly(pct=0.3)
     
-    train_loader = get_torch_dataloader(mosm_dataset, 8)
+    train_loader = get_torch_dataloader(mosm_dataset, 1067)
     print('\nTrial', n+1, 'of', n_trials)
     num_inducing = (1 + 1)**3
-    pdb.set_trace()
     mosm = mogptk.MOSM(dataset=mosm_dataset, train_loader=train_loader, 
                        inference=mogptk.model.Hensman(inducing_points=num_inducing),
                        Q=Q)

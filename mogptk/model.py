@@ -576,8 +576,8 @@ class Model:
 
             for i in range(iters):
                 # take a batch from self.X
-                import pdb
-                pdb.set_trace()
+                # import pdb
+                # pdb.set_trace()
                 epoch_loss = 0
                 for x, y in self.train_loader:
                     # pdb.set_trace()
@@ -586,10 +586,13 @@ class Model:
                     # y = y.reshape(-1, 1)
                     # x = torch.from_numpy(x)
                     epoch_loss += self.loss(x, y)
-                    print('batch_loss:', self.loss(x, y))
+                    # print('batch_loss:', self.loss(x, y))
                     optimizer.step()
-                progress(i, epoch_loss/len(self.train_loader))
-        progress(iters, self.loss(), last=True)
+                if i == iters - 1:
+                    progress(i, epoch_loss, last=True)
+                else:
+                    progress(i, epoch_loss)
+        # progress(iters, self.loss(), last=True)
 
         if verbose:
             elapsed_time = time.time() - initial_time
