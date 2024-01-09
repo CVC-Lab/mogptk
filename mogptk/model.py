@@ -17,6 +17,20 @@ from .util import *
 
 logger = logging.getLogger('mogptk')
 
+def pad_zero(x, y):
+    import pdb
+    pdb.set_trace()
+    print([len(ts) for ts in x])
+    # Assuming you want to pad the time series to a common length
+    common_length = max(len(ts) for ts in x)
+    # Pad time series
+    px = [np.pad(ts, pad_width=((0, common_length - len(ts)), (0, 0))) for ts in x]
+    common_length = max(len(ts) for ts in y)
+    # Pad time series
+    py = [np.pad(ts, pad_width=((0, common_length - len(ts)))) for ts in y]
+    # px = np.concatenate(px, -1)
+    return px, py
+
 class Kernels(dict):
     __getattr__ = dict.get
 
@@ -217,6 +231,7 @@ class Model:
         self.dataset = dataset
         self.is_multioutput = kernel.output_dims is not None
         X, Y = self.dataset.get_train_data() # [[26, 3], ... 31 copies], [26, 31]
+        # X, Y = pad_zero(X, Y)
         x, y = self._to_kernel_format(X, Y)
 
         y_err = None
@@ -561,14 +576,15 @@ class Model:
 
             for i in range(iters):
                 # take a batch from self.X
-                # import pdb
-                # pdb.set_trace()
+                import pdb
+                pdb.set_trace()
                 epoch_loss = 0
                 for x, y in self.train_loader:
-                    nx = [x for _ in range(y.shape[-1])]
-                    x = self._to_kernel_format(nx)
-                    y = y.reshape(-1, 1)
-                    x = torch.from_numpy(x)
+                    # pdb.set_trace()
+                    # nx = [x for _ in range(y.shape[-1])]
+                    # x = self._to_kernel_format(nx)
+                    # y = y.reshape(-1, 1)
+                    # x = torch.from_numpy(x)
                     epoch_loss += self.loss(x, y)
                     print('batch_loss:', self.loss(x, y))
                     optimizer.step()
@@ -601,6 +617,8 @@ class Model:
             numpy.ndarray: Y data of shape (data_points,1).
             numpy.ndarray: Original but normalized X data. Only if no Y is passed.
         """
+        # import pdb
+        # pdb.set_trace()
         x = np.concatenate(X, axis=0)
         if self.is_multioutput:
             chan = [j * np.ones(len(X[j])) for j in range(len(X))]

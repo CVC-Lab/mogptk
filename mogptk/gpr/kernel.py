@@ -31,6 +31,7 @@ class Kernel(torch.nn.Module):
         Returns:
             torch.tensor: Kernel matrix of shape (data_points0,data_points1).
         """
+        # print(X1.shape, X2.shape)
         X1, X2 = self._check_input(X1, X2)
         return self.K(X1, X2)
 

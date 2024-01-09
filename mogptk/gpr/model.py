@@ -57,6 +57,7 @@ def init_inducing_points(Z, X, method='grid', output_dims=None):
             if isinstance(Z, int):
                 Z = [Z] * output_dims
             M = Z
+
             Z = torch.zeros((sum(M),X.shape[1]))
             for j in range(len(M)):
                 m0 = sum(M[:j])
@@ -789,6 +790,11 @@ class SparseHensman(Model):
 
         n = self.X.shape[0]
         self.is_sparse = Z is not None
+        import pdb
+        pdb.set_trace()
+
+        # train_R: X - [804, 4], Z - 4**3
+        # test_example: X - (1067, 2) Z - 2**3
         if self.is_sparse:
             Z = init_inducing_points(Z, self.X, method=Z_init, 
                                      output_dims=kernel.output_dims)
@@ -848,6 +854,8 @@ class SparseHensman(Model):
     def _predict_f(self, X, full=False):
         
         Kuu = self.kernel(self.Z())
+        import pdb
+        pdb.set_trace()
         Kus = self.kernel(self.Z(),X)  # NxS
 
         Luu = self._cholesky(Kuu, add_jitter=True)  # NxN
