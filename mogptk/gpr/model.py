@@ -121,8 +121,8 @@ class Model(torch.nn.Module):
     def name(self):
         return self.__class__.__name__
 
-    def forward(self, x=None):
-        return -self.log_marginal_likelihood() - self.log_prior()
+    def forward(self, X, y):
+        return -self.log_marginal_likelihood(X, y) - self.log_prior()
 
     def compile(self):
         if self._compiled_forward is None:
@@ -254,7 +254,7 @@ class Model(torch.nn.Module):
             plot_gram(K)
             raise CholeskyException(e.args[0], K, self)
 
-    def log_marginal_likelihood(self):
+    def log_marginal_likelihood(self, X=None, y=None):
         """
         Return the log marginal likelihood given by
 
@@ -276,7 +276,7 @@ class Model(torch.nn.Module):
         """
         return sum([p.log_prior() for p in self.parameters()])
 
-    def loss(self):
+    def loss(self, X=None, y=None):
         """
         Model loss for training.
 
@@ -285,7 +285,8 @@ class Model(torch.nn.Module):
         """
         self.zero_grad(set_to_none=True)
         if self._compiled_forward is None:
-            loss = self.forward()
+            
+            loss = self.forward(X, y)
         else:
             loss = self._compiled_forward()
         loss.backward()
@@ -789,10 +790,10 @@ class SparseHensman(Model):
         n = self.X.shape[0]
         self.is_sparse = Z is not None
         if self.is_sparse:
-            Z = init_inducing_points(Z, self.X, method=Z_init, output_dims=kernel.output_dims)
+            Z = init_inducing_points(Z, self.X, method=Z_init, 
+                                     output_dims=kernel.output_dims)
             Z = self._check_input(Z)
             n = Z.shape[0]
-
         self.eye = torch.eye(n, device=config.device, dtype=config.dtype)
         self.log_marginal_likelihood_constant = 0.5*self.X.shape[0]*np.log(2.0*np.pi)
         self.q_mu = Parameter(torch.zeros(n,1))
@@ -813,34 +814,39 @@ class SparseHensman(Model):
         kl -= q_mu.shape[0]
         return 0.5*kl
 
-    def elbo(self):
+    def elbo(self, X, y):
         if self.mean is not None:
-            y = self.y - self.mean(self.X).reshape(-1,1)  # Nx1
+            y = y - self.mean(X).reshape(-1,1)  # Nx1
         else:
-            y = self.y  # Nx1
+            y = y  # Nx1
 
         if self.is_sparse:
-            qf_mu, qf_var_diag = self._predict_f(self.X, full=False)
+            qf_mu, qf_var_diag = self._predict_f(X, full=False)
         else:
-            Kff = self.kernel(self.X)
+            Kff = self.kernel(X)
             Lff = self._cholesky(Kff, add_jitter=True)  # NxN
 
             qf_mu = Lff.mm(self.q_mu())
             if self.mean is not None:
-                qf_mu -= self.mean(self.X).reshape(-1,1)  # Sx1
+                qf_mu -= self.mean(X).reshape(-1,1)  # Sx1
 
             qf_sqrt = Lff.mm(self.q_sqrt().tril())
             qf_var_diag = qf_sqrt.mm(qf_sqrt.T).diagonal().reshape(-1,1)
-
-        var_exp = self.likelihood.variational_expectation(self.X, y, qf_mu, qf_var_diag)
+        
+        X = X.to(config.device)
+        y = y.to(config.device)
+        
+        var_exp = self.likelihood.variational_expectation(X, y, qf_mu, qf_var_diag)
+        # RuntimeError: The size of tensor a (256) must match the size of tensor b (7936) at non-singleton dimension 0
         kl = self.kl_gaussian(self.q_mu(), self.q_sqrt())
         return var_exp - kl
 
-    def log_marginal_likelihood(self):
+    def log_marginal_likelihood(self, X, y):
         # maximize the lower bound
-        return self.elbo()
+        return self.elbo(X, y)
 
     def _predict_f(self, X, full=False):
+        
         Kuu = self.kernel(self.Z())
         Kus = self.kernel(self.Z(),X)  # NxS
 

@@ -197,6 +197,7 @@ class DataSet:
                     self.append(Data(args[0], args[1], name=names[0]))
             return
 
+        print(args)
         for arg in args:
             self.append(arg)
 

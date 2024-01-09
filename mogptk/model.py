@@ -178,7 +178,7 @@ class Hensman:
         return gpr.SparseHensman(kernel, x, y, Z=self.inducing_points, Z_init=self.init_inducing_points, likelihood=self.likelihood, jitter=self.jitter, mean=mean)
 
 class Model:
-    def __init__(self, dataset, kernel, inference=Exact(), mean=None, name=None):
+    def __init__(self, dataset,  kernel, train_loader, inference=Exact(), mean=None, name=None):
         """
         Model is the base class for multi-output Gaussian process models.
 
@@ -216,8 +216,7 @@ class Model:
         self.name = name
         self.dataset = dataset
         self.is_multioutput = kernel.output_dims is not None
-
-        X, Y = self.dataset.get_train_data()
+        X, Y = self.dataset.get_train_data() # [[26, 3], ... 31 copies], [26, 31]
         x, y = self._to_kernel_format(X, Y)
 
         y_err = None
@@ -371,7 +370,7 @@ class Model:
         """
         return 2.0*self.num_parameters() - 2.0*self.log_marginal_likelihood()
 
-    def loss(self):
+    def loss(self, X=None, y=None):
         """
         Returns the loss of the kernel and its data and parameters.
 
@@ -381,7 +380,7 @@ class Model:
         Examples:
             >>> model.loss()
         """
-        return float(self.gpr.loss())
+        return float(self.gpr.loss(X, y))
 
     def error(self, method='MAE', use_all_data=False):
         """
@@ -438,7 +437,7 @@ class Model:
         else:
             raise ValueError("valid error calculation methods are MAE, MAPE, sMAPE, MSE, and RMSE")
 
-    def train(self, method='Adam', iters=500, verbose=False, error=None, plot=False, jit=None,
+    def train(self, method='Adam', mini_batching=True,iters=500, verbose=False, error=None, plot=False, jit=None,
               **kwargs):
         """
         Trains the model by optimizing the (hyper)parameters of the kernel to approach the training data.
@@ -561,8 +560,19 @@ class Model:
                 optimizer = torch.optim.Adagrad(self.gpr.parameters(), **kwargs)
 
             for i in range(iters):
-                progress(i, self.loss())
-                optimizer.step()
+                # take a batch from self.X
+                # import pdb
+                # pdb.set_trace()
+                epoch_loss = 0
+                for x, y in self.train_loader:
+                    nx = [x for _ in range(y.shape[-1])]
+                    x = self._to_kernel_format(nx)
+                    y = y.reshape(-1, 1)
+                    x = torch.from_numpy(x)
+                    epoch_loss += self.loss(x, y)
+                    print('batch_loss:', self.loss(x, y))
+                    optimizer.step()
+                progress(i, epoch_loss/len(self.train_loader))
         progress(iters, self.loss(), last=True)
 
         if verbose:

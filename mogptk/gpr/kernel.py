@@ -70,7 +70,7 @@ class Kernel(torch.nn.Module):
             if not torch.is_tensor(X2):
                 X2 = torch.tensor(X2, device=config.device, dtype=config.dtype)
             elif X2.device != config.device or X2.dtype != config.dtype:
-                X2 = X2.to(device, dtype)
+                X2 = X2.to(X1.device, X1.dtype)
             if X2.ndim != 2:
                 raise ValueError("X should have two dimensions (data_points,input_dims)")
             if X2.shape[0] == 0:

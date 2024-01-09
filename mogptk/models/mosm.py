@@ -39,9 +39,11 @@ class MOSM(Model):
 
     [1] G. Parra and F. Tobar, "Spectral Mixture Kernels for Multi-Output Gaussian Processes", Advances in Neural Information Processing Systems 31, 2017
     """
-    def __init__(self, dataset, Q=1, inference=Exact(), mean=None, name="MOSM"):
+    def __init__(self, dataset, train_loader, Q=1, inference=Exact(), mean=None, name="MOSM"):
         if not isinstance(dataset, DataSet):
             dataset = DataSet(dataset)
+        
+        self.train_loader = train_loader
 
         output_dims = dataset.get_output_dims()
         input_dims = dataset.get_input_dims()[0]
@@ -49,12 +51,15 @@ class MOSM(Model):
             if input_dim != input_dims:
                 raise ValueError("input dimensions for all channels must match")
 
-        kernel = MultiOutputSpectralMixtureKernel(Q=Q, output_dims=output_dims, input_dims=input_dims)
+        kernel = MultiOutputSpectralMixtureKernel(Q=Q, 
+                                                  output_dims=output_dims, 
+                                                  input_dims=input_dims)
         kernel.weight.assign(torch.rand(output_dims,Q))
         kernel.mean.assign(torch.rand(output_dims,Q,input_dims))
         kernel.variance.assign(torch.rand(output_dims,Q,input_dims))
-
-        super().__init__(dataset, kernel, inference, mean, name)
+        # import pdb
+        # pdb.set_trace()
+        super().__init__(dataset, kernel, train_loader, inference, mean, name)
         self.Q = Q
         nyquist = np.array(self.dataset.get_nyquist_estimation())[:,None,:].repeat(Q,axis=1)
         self.gpr.kernel.mean.assign(upper=np.maximum(self.gpr.kernel.mean.lower.detach().cpu().numpy(), nyquist))
