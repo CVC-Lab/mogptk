@@ -1,6 +1,7 @@
 import os
 import time
 import math
+import tqdm
 import pickle
 import inspect
 import numpy as np
@@ -573,8 +574,8 @@ class Model:
                 optimizer = torch.optim.SGD(self.gpr.parameters(), **kwargs)
             elif method == 'AdaGrad':
                 optimizer = torch.optim.Adagrad(self.gpr.parameters(), **kwargs)
-
-            for i in range(iters):
+            
+            for i in tqdm.tqdm(range(iters)):
                 # take a batch from self.X
                 # import pdb
                 # pdb.set_trace()

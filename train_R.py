@@ -11,7 +11,7 @@ from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 import pdb
 # from models.mosm.create_point_level_dataset import prepare_point_ds_mogptk
-batch_size = 256
+batch_size = 512
 
 
 def prepare_point_ds_mogptk(dataset, num_points=None):
@@ -39,20 +39,7 @@ def prepare_point_ds_mogptk(dataset, num_points=None):
         ds.append(d)
     return ds
 
-# def prepare_point_ds(dataset, num_points=None):
-#     Xt = []
-#     Yt = []
-#     for items in dataset:
-#         y, z, x_gt, _  = items
-#         xt = rearrange(z, 'c h w -> (h w) c')
-#         yt = rearrange(x_gt, 'c h w -> (h w) c')
-#         Xt.append(xt)
-#         Yt.append(yt)
 
-#     Xt, ps_x = pack(Xt, "* c") 
-#     Yt, ps_y = pack(Yt, "* c")
-#     # pdb.set_trace()
-#     return Xt, Yt
 
 def _to_kernel_format(dataset, X, Y=None, is_multioutput=True):
         """
@@ -92,7 +79,6 @@ def get_torch_dataloader(dataset, batch_size, shuffle=True):
     # py = np.array(py).transpose(1, 0)
 
     px, py = _to_kernel_format(dataset, x, y)
-    pdb.set_trace()
     train_ds = TensorDataset(torch.from_numpy(px), torch.from_numpy(py))
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=shuffle)
     return train_loader
@@ -107,9 +93,10 @@ train_loader = get_torch_dataloader(train_ds, batch_size=batch_size, shuffle=Tru
 # train_loader = TensorDataset(train_x, train_y)
 # train_loader = DataLoader(train_loader, batch_size=batch_size, shuffle=True)
 # pdb.set_trace()
+mogptk.gpr.use_gpu(0)
 method = 'Adam'
 lr = 0.02
-iters = 5
+iters = 500
 # mogptk.gpr.use_cpu(0)
 # mogptk.gpr.use_single_precision()
 # pdb.set_trace()
@@ -119,5 +106,8 @@ mosm = mogptk.MOSM(dataset=train_ds, train_loader=train_loader, inference=mogptk
 mosm.init_parameters(method='LS')
 # pdb.set_trace()
 mosm.train(method=method, lr=lr, iters=iters, verbose=True, jit=False)
-mosm.print_parameters()
-mosm.plot_prediction(transformed=True)
+# mosm.print_parameters()
+# mosm.plot_prediction(transformed=True)
+# error = mogptk.error(mosm, per_channel=True)[0]
+# pdb.set_trace()
+mosm.save("./artifacts/mosm_train_0")

@@ -40,7 +40,7 @@ Q = 3
 init_method = 'LS'
 method = 'Adam'
 lr = 0.1
-iters = 1000
+iters = 5
 
 
 def _to_kernel_format(dataset, X, Y=None, is_multioutput=True):
@@ -113,3 +113,10 @@ for n in range(n_trials):
     mosm_mae[n,:] = np.array([item['MAE'] for item in error])
     mosm_rmse[n,:] = np.array([item['RMSE'] for item in error])
     mosm_mape[n,:] = np.array([item['MAPE'] for item in error])
+
+df = pd.DataFrame(np.c_[mosm_mae.mean(1), mosm_rmse.mean(1), mosm_mape.mean(1),
+             mosm_mae.std(1), mosm_rmse.std(1), mosm_mape.std(1)],
+             columns=['MAE', 'RMSE', 'MAPE', 'MAE std', 'RMSE std', 'MAPE std'])
+
+df.to_csv('../../artifacts/mosm_example_training_summary.csv')
+mosm.save("../../artifacts/mosm_example_model")
