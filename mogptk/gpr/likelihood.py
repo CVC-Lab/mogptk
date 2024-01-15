@@ -326,6 +326,8 @@ class GaussianLikelihood(Likelihood):
     def __init__(self, scale=1.0):
         super().__init__()
         self.scale = Parameter(scale, lower=config.positive_minimum)
+        
+        # self.scale = self.scale.to(config.device)
         if self.scale.ndim == 1:
             self.output_dims = self.scale.shape[0]
 

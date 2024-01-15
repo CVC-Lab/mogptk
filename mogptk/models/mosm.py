@@ -113,6 +113,7 @@ class MOSM(Model):
             _, Y = self.dataset.get_train_data(transformed=True)
             Y_std = [Y[j].std() for j in range(self.dataset.get_output_dims())]
             if self.gpr.likelihood.scale().ndim == 0:
+                # Y_std = Y_std.to(self.gpr.likelihood.scale().device)
                 self.gpr.likelihood.scale.assign(np.mean(Y_std))
             else:
                 self.gpr.likelihood.scale.assign(Y_std)

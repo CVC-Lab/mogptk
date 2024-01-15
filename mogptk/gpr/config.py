@@ -4,9 +4,15 @@ class Config:
     dtype = torch.float64
     if torch.cuda.is_available():
         device = torch.device('cuda', torch.cuda.current_device())
+        # device = torch.device("cuda")
     else:
         device = torch.device('cpu')
     positive_minimum = 1e-8
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(Config, cls).__new__(cls)
+        return cls.instance
+
 config = Config()
 
 def use_half_precision():

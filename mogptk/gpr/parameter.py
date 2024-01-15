@@ -109,7 +109,8 @@ class Parameter(torch.nn.Parameter):
         train (boolean): Train parameter, otherwise keep its value fixed.
     """
     def __new__(cls, value, name=None, lower=None, upper=None, prior=None, train=True):
-        value = Parameter.to_tensor(value)
+        
+        value = Parameter.to_tensor(value).to(config.device)
         self = super().__new__(cls, value)
         self._name = name
         self.lower = None
