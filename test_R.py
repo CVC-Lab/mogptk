@@ -16,6 +16,7 @@ from models.metrics import (
     # compare_sam,
     compare_ergas
 )
+import pdb
 from torchmetrics import SpectralAngleMapper
 from torchmetrics import ErrorRelativeGlobalDimensionlessSynthesis as ERGAS
 sam = SpectralAngleMapper()
@@ -25,12 +26,14 @@ ergas = ERGAS(ratio=1/8)
 def prepare_point_ds_mogptk(dataset, num_points=None):
     Xt = []
     Yt = []
-    if not num_points:
-        num_points = len(dataset)
 
     for i, items in enumerate(dataset):
-        y, z, x_gt, _  = items
-        xt = rearrange(z, 'c h w -> (h w) c')
+        y, z, x_gt, seg_map,  _  = items
+        seg_map = rearrange(torch.from_numpy(np.array(seg_map)), 
+                            'h w c -> c w h')#.flip(0)
+        
+        xt, _ = pack([z, seg_map], '* w h')
+        xt = rearrange(xt, 'c h w -> (h w) c')
         yt = rearrange(x_gt, 'c h w -> (h w) c')
         Xt.append(xt)
         Yt.append(yt)
@@ -42,8 +45,14 @@ def prepare_point_ds_mogptk(dataset, num_points=None):
     Yt, ps = pack(Yt, "* c")
     ds = mogptk.DataSet()
     
+    # shuffle here
+    shuf_idx = torch.randperm(num_points, device='cpu')
+    Xt = Xt[shuf_idx]
+    Yt = Yt[shuf_idx]
+
     for c in range(Yt.shape[1]):
         d = Data(Xt[:num_points, :], Yt[:num_points, c])
+        # d = Data(Xt, Yt[:, c])
         ds.append(d)
     return ds
 
@@ -117,13 +126,13 @@ def predict(model, test_loader):
 
 mogptk.gpr.use_gpu(0)
 num_inducing = 4**3
-save_path = "./artifacts/mosm_train_4"
+save_path = "./artifacts/mosm_train_material_Q1"
 data_path = "./datasets/data/CAVE"
-batch_size = 128 * 128
-dataset = CAVEDataset(data_path, None, mode="train")
+batch_size = 64 * 64
+# dataset = CAVEDataset(data_path, None, mode="train")
 test_dataset = CAVEDataset(data_path, None, mode="test")
-train_ds = prepare_point_ds_mogptk(dataset=dataset, num_points=None)
-train_loader = get_torch_dataloader(train_ds, batch_size=batch_size, shuffle=True)
+# train_ds = prepare_point_ds_mogptk(dataset=dataset, num_points=None)
+# train_loader = get_torch_dataloader(train_ds, batch_size=batch_size, shuffle=True)
 
 # mosm = mogptk.MOSM(dataset=train_ds, 
 #                    train_loader=train_loader, 
@@ -131,15 +140,16 @@ train_loader = get_torch_dataloader(train_ds, batch_size=batch_size, shuffle=Tru
 #                    Q=1)
 
 mosm = mogptk.model.LoadModel(save_path)
-mosm = mosm
 # pdb.set_trace()
 
 
 # load image from dataset convert to pointwise then extract mean and convert back to image
 total_psnr, total_ssim, total_rmse, total_sam, total_ergas =0,0,0,0,0
 for items in test_dataset:
-    y, z, x_gt, _  = items
-    
+    y, z, x_gt, seg_map,  max_vals  = items
+    seg_map = rearrange(torch.from_numpy(np.array(seg_map)), 
+                            'h w c -> c w h')#.flip(0)
+    z, _ = pack([z, seg_map], '* w h')
     test_x = rearrange(z, 'c h w -> (h w) c')
     test_y = rearrange(x_gt, 'c h w -> (h w) c')
     
@@ -148,6 +158,7 @@ for items in test_dataset:
     # Make predictions
     mean, lower, upper = predict(mosm, test_loader)
     pred_x = torch.reshape(mean, x_gt.shape)
+    pdb.set_trace()
 
     
     # print(pred_x.shape)

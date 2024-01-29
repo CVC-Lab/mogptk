@@ -25,8 +25,12 @@ def prepare_point_ds_mogptk(dataset, num_points=None):
     Yt = []
 
     for i, items in enumerate(dataset):
-        y, z, x_gt, _  = items
-        xt = rearrange(z, 'c h w -> (h w) c')
+        y, z, x_gt, seg_map,  _  = items
+        seg_map = rearrange(torch.from_numpy(np.array(seg_map)), 
+                            'h w c -> c w h')#.flip(0)
+        
+        xt, _ = pack([z, seg_map], '* w h')
+        xt = rearrange(xt, 'c h w -> (h w) c')
         yt = rearrange(x_gt, 'c h w -> (h w) c')
         Xt.append(xt)
         Yt.append(yt)
@@ -85,10 +89,13 @@ def get_torch_dataloader(dataset, batch_size, shuffle=True):
                               shuffle=shuffle)#, generator=torch.Generator('cuda:0')
     return train_loader
 
+
+
 data_path = "./datasets/data/CAVE"
+save_path = "./artifacts/mosm_train_material_Q1"
 dataset = CAVEDataset(data_path, None, mode="train")
 test_dataset = CAVEDataset(data_path, None, mode="test")
-train_ds = prepare_point_ds_mogptk(dataset=dataset, num_points=5000)
+train_ds = prepare_point_ds_mogptk(dataset=dataset, num_points=4096)
 # test_ds = prepare_point_ds_mogptk(dataset=test_dataset)
 train_loader = get_torch_dataloader(train_ds, batch_size=batch_size, shuffle=False)
 # train_x, train_y = prepare_point_ds(dataset=dataset, num_points=None)
@@ -97,18 +104,19 @@ train_loader = get_torch_dataloader(train_ds, batch_size=batch_size, shuffle=Fal
 # pdb.set_trace()
 method = 'Adam'
 lr = 0.02
-iters = 50
+iters = 10
 # mogptk.gpr.use_cpu(0)
 # mogptk.gpr.use_single_precision()
 # pdb.set_trace()
 # inducing_points = torch.randint(0, len(train_ds), 32)
-num_inducing = 4**3
+num_inducing = 4**4
 mosm = mogptk.MOSM(dataset=train_ds, train_loader=train_loader, 
-                   inference=mogptk.model.Hensman(inducing_points=num_inducing),
-                   Q=2)
+                   inference=mogptk.model.Hensman(inducing_points=num_inducing), #inducing_points=num_inducing
+                   Q=1)
 
 
 mosm.init_parameters(method='LS')
+# mosm = mogptk.model.LoadModel(save_path)
 # mosm = mogptk.model.LoadModel("./artifacts/mosm_train_2")
 # pdb.set_trace()
 mosm.train(method=method, lr=lr, iters=iters, verbose=True, jit=False)
@@ -116,4 +124,4 @@ mosm.train(method=method, lr=lr, iters=iters, verbose=True, jit=False)
 # mosm.plot_prediction(transformed=True)
 # error = mogptk.error(mosm, per_channel=True)[0]
 # pdb.set_trace()
-mosm.save("./artifacts/mosm_train_4_non_sparse")
+mosm.save("./artifacts/mosm_train_material_Q1")

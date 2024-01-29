@@ -580,7 +580,7 @@ class Model:
                 # import pdb
                 # pdb.set_trace()
                 epoch_loss = 0
-                for x, y in self.train_loader:
+                for x, y in tqdm.tqdm(self.train_loader):
                     # pdb.set_trace()
                     # nx = [x for _ in range(y.shape[-1])]
                     # x = self._to_kernel_format(nx)
